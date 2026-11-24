@@ -11,6 +11,9 @@ struct Parameters {
     action: u32,
     progress: f32,
     transition: f32,
+    frame_x: f32,
+    frame_y: f32,
+    zoom: f32,
 }
 
 @group(0) @binding(0) var<uniform> p: Parameters;
@@ -22,6 +25,8 @@ const WF_REFLECTIONS: u32 = 2u;
 const WF_PARTICLES: u32 = 4u;
 const WF_SHADOWS: u32 = 8u;
 const WF_GRAIN: u32 = 16u;
+const WF_CAMERA: u32 = 32u;
+const WF_ENSEMBLE: u32 = 64u;
 
 fn wf_enabled(flag: u32) -> bool {
     return (p.effects & flag) != 0u;
@@ -110,13 +115,14 @@ fn fullscreen(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f {
 @fragment
 fn pixel(@builtin(position) position: vec4f) -> @location(0) vec4f {
     let film = (position.xy - 0.5 * p.size) * vec2f(1.0, -1.0) / min(p.size.x, p.size.y);
-    var color: vec3f;
-    if p.samples > 1u {
-        let shift = vec2f(0.38, -0.29) / min(p.size.x, p.size.y);
-        color = mix(wf_story_frame(film - shift), wf_story_frame(film + shift), 0.5);
-    } else {
-        color = wf_story_frame(film);
+    let count = clamp(p.samples, 1u, 2u);
+    var color = vec3f(0.0);
+    for (var i = 0u; i < count; i++) {
+        let jitter = select(0.0, 2.0 * f32(i) - 1.0, count == 2u);
+        let offset = jitter * vec2f(0.38, -0.29) / min(p.size.x, p.size.y);
+        color += wf_story_frame(film + offset);
     }
+    color /= f32(count);
     let grain = select(0.0, (hash(position.xy + vec2f(seed_part(45u) * 19.0)) - 0.5) / 180.0, wf_enabled(WF_GRAIN));
     let fade = smoothstep(0.0, 1.0, p.transition);
     return vec4f((grade(color, film) + grain) * fade, 1.0);

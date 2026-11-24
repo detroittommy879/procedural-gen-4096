@@ -42,12 +42,37 @@ enum Action {
     Recover = 5,
     Return = 6,
     Relight = 7,
+    Synchronize = 8,
 }
 
 #[derive(Deserialize)]
 struct Cue {
     at: u32,
     text: String,
+    #[serde(default)]
+    camera: Option<CameraMove>,
+}
+
+#[derive(Deserialize)]
+struct CameraMove {
+    from: [f32; 3],
+    to: [f32; 3],
+}
+
+impl Chapter {
+    fn camera_at(&self, elapsed: f32) -> [f32; 3] {
+        let count = self.cues.partition_point(|cue| cue.at as f32 <= elapsed);
+        let Some(cue) = count.checked_sub(1).map(|i| &self.cues[i]) else {
+            return [0.0, 0.0, 1.0];
+        };
+        let Some(camera) = &cue.camera else {
+            return [0.0, 0.0, 1.0];
+        };
+        let end = self.cues.get(count).map_or(self.seconds, |next| next.at);
+        let t = ((elapsed - cue.at as f32) / (end - cue.at) as f32).clamp(0.0, 1.0);
+        let t = t * t * (3.0 - 2.0 * t);
+        std::array::from_fn(|i| camera.from[i] + (camera.to[i] - camera.from[i]) * t)
+    }
 }
 
 pub struct Moment<'a> {
@@ -106,6 +131,16 @@ impl Timeline {
                     chapter.title
                 ));
             }
+            for camera in chapter.cues.iter().filter_map(|cue| cue.camera.as_ref()) {
+                for [x, y, zoom] in [camera.from, camera.to] {
+                    if x.abs() > 1.0 || y.abs() > 0.5 || !(1.0..=4.0).contains(&zoom) {
+                        return Err(format!(
+                            "Chapter '{}' has a camera outside its framing limits.",
+                            chapter.title
+                        ));
+                    }
+                }
+            }
             if chapter.cues.iter().any(|cue| cue.at >= chapter.seconds)
                 || chapter.cues.windows(2).any(|pair| pair[0].at >= pair[1].at)
             {
@@ -128,6 +163,26 @@ impl Timeline {
             .take(index)
             .map(|chapter| chapter.seconds)
             .sum::<u32>() as f32
+    }
+
+    pub fn adjacent_shot(&self, seconds: f64, forward: bool) -> Option<f64> {
+        let mut previous = None;
+        let mut chapter_start = 0;
+        for chapter in &self.chapters {
+            let starts =
+                std::iter::once(0).chain(chapter.cues.iter().map(|cue| cue.at).filter(|&t| t > 0));
+            for offset in starts {
+                let shot = f64::from(chapter_start + offset);
+                if forward && shot > seconds {
+                    return Some(shot);
+                }
+                if shot < seconds {
+                    previous = Some(shot);
+                }
+            }
+            chapter_start += chapter.seconds;
+        }
+        if forward { None } else { previous }
     }
 
     pub fn moment(&self, seconds: f32) -> Moment<'_> {
@@ -190,6 +245,7 @@ impl Timeline {
                 shot: Shot {
                     action: moment.chapter.action as u32,
                     progress,
+                    camera_frame: moment.chapter.camera_at(moment.elapsed),
                     transition: 0.47 + transition * 0.53,
                 },
             },
@@ -208,11 +264,11 @@ mod tests {
         let story = Timeline::bundled();
         story.validate(&scenes).unwrap();
         assert_eq!(story.duration(), 1800.0);
-        assert_eq!(story.chapters.len(), 7);
+        assert_eq!(story.chapters.len(), 8);
         assert_eq!(story.moment(209.99).chapter_index, 0);
         assert_eq!(story.moment(210.0).chapter_index, 1);
         assert_eq!(story.moment(210.0).elapsed, 0.0);
-        assert_eq!(story.moment(1800.0).chapter_index, 6);
+        assert_eq!(story.moment(1800.0).chapter_index, 7);
         assert_eq!(story.moment(1800.0).elapsed, 270.0);
         assert_eq!(
             story
@@ -222,6 +278,24 @@ mod tests {
                 .progress,
             1.0
         );
+    }
+
+    #[test]
+    fn cuts_and_camera_interpolation_are_repeatable() {
+        let story = Timeline::bundled();
+        let chapter = &story.chapters[0];
+        assert_eq!(chapter.camera_at(0.0), [0.0, 0.0, 1.0]);
+        assert_eq!(chapter.camera_at(50.0), [-0.31, -0.25, 2.0]);
+        assert!((chapter.camera_at(25.0)[2] - 1.115).abs() < 0.00001);
+        assert_eq!(story.adjacent_shot(135.0, true), Some(210.0));
+        assert_eq!(story.adjacent_shot(210.0, false), Some(135.0));
+        assert_eq!(story.adjacent_shot(1800.0, true), None);
+        assert_eq!(story.adjacent_shot(0.0, false), None);
+        let legacy: Chapter = serde_json::from_str(
+            r#"{"title":"Old","scene":"alpine-lake","seconds":8,"cues":[{"at":1,"text":"Sky"}]}"#,
+        )
+        .unwrap();
+        assert_eq!(legacy.camera_at(4.0), [0.0, 0.0, 1.0]);
     }
 
     #[test]

@@ -34,12 +34,14 @@ const FORMATS: [(&str, [u32; 2]); 5] = [
     ("Portrait", [1440, 2560]),
 ];
 
-const EFFECT_OPTIONS: [(u32, &str); 5] = [
+const EFFECT_OPTIONS: [(u32, &str); 7] = [
     (Effects::CLOUDS, "Clouds"),
     (Effects::REFLECTIONS, "Reflections"),
     (Effects::PARTICLES, "Particles"),
     (Effects::SHADOWS, "Cast shadows"),
     (Effects::GRAIN, "Film grain"),
+    (Effects::CAMERA, "Story camera cuts"),
+    (Effects::ENSEMBLE, "Story supporting cast"),
 ];
 
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -96,6 +98,13 @@ impl Playback {
 struct Shader {
     pipeline: Option<wgpu::RenderPipeline>,
     error: Option<String>,
+    stale: bool,
+}
+
+struct Compilation {
+    index: usize,
+    revision: u64,
+    result: std::sync::mpsc::Receiver<Result<wgpu::RenderPipeline, String>>,
 }
 
 struct Preview {
@@ -111,6 +120,8 @@ pub struct Studio {
     active: usize,
     settings: Settings,
     shaders: HashMap<usize, Shader>,
+    compilation: Option<Compilation>,
+    revision: u64,
     effects: Effects,
     mode: Mode,
     motion: Playback,
@@ -181,6 +192,8 @@ impl Studio {
             active: 0,
             settings,
             shaders: HashMap::new(),
+            compilation: None,
+            revision: 0,
             effects: Effects::default(),
             mode: Mode::default(),
             motion: Playback::default(),
@@ -199,18 +212,49 @@ impl Studio {
     }
 
     fn prepare(&mut self, index: usize) {
-        self.shaders.entry(index).or_insert_with(|| {
-            let scene = &self.scenes[index];
-            match self.gpu.compile(&scene.source, &scene.name) {
-                Ok(pipeline) => Shader {
-                    pipeline: Some(pipeline),
-                    error: None,
-                },
-                Err(error) => Shader {
-                    pipeline: None,
-                    error: Some(error),
-                },
+        if let Some(job) = &self.compilation {
+            use std::sync::mpsc::TryRecvError;
+            let result = match job.result.try_recv() {
+                Ok(result) => result,
+                Err(TryRecvError::Empty) => return,
+                Err(TryRecvError::Disconnected) => Err("Shader compiler stopped.".into()),
+            };
+            if job.revision == self.revision {
+                let fallback = self
+                    .shaders
+                    .remove(&job.index)
+                    .and_then(|shader| shader.pipeline);
+                let shader = match result {
+                    Ok(pipeline) => Shader {
+                        pipeline: Some(pipeline),
+                        error: None,
+                        stale: false,
+                    },
+                    Err(error) => Shader {
+                        pipeline: fallback,
+                        error: Some(error),
+                        stale: false,
+                    },
+                };
+                self.shaders.insert(job.index, shader);
+                self.rendered = None;
             }
+            self.compilation = None;
+        }
+        if self.shaders.get(&index).is_some_and(|shader| !shader.stale) {
+            return;
+        }
+        let gpu = self.gpu.clone();
+        let source = self.scenes[index].source.clone();
+        let name = self.scenes[index].name.clone();
+        let (sender, result) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            let _ = sender.send(gpu.compile(&source, &name));
+        });
+        self.compilation = Some(Compilation {
+            index,
+            revision: self.revision,
+            result,
         });
     }
 
@@ -281,14 +325,18 @@ impl Studio {
         );
         self.scenes = scenes;
         self.shaders.clear();
+        self.revision += 1;
         self.rendered = None;
         let index = self.input().0;
-        self.prepare(index);
-        if self.scenes[index].id == previous_id
-            && let Some(shader) = self.shaders.get_mut(&index)
-            && shader.error.is_some()
-        {
-            shader.pipeline = fallback;
+        if self.scenes[index].id == previous_id && fallback.is_some() {
+            self.shaders.insert(
+                index,
+                Shader {
+                    pipeline: fallback,
+                    error: None,
+                    stale: true,
+                },
+            );
         }
     }
 
@@ -313,7 +361,14 @@ impl Studio {
         }
         let (index, input) = self.input();
         self.prepare(index);
-        let Some(pipeline) = &self.shaders[&index].pipeline else {
+        if self.compilation.is_some() {
+            ctx.request_repaint_after(Duration::from_millis(32));
+        }
+        let Some(pipeline) = self
+            .shaders
+            .get(&index)
+            .and_then(|shader| shader.pipeline.as_ref())
+        else {
             return;
         };
         if self.export.is_some() {
@@ -380,6 +435,7 @@ impl Studio {
         let Some(pipeline) = self
             .shaders
             .get(&index)
+            .filter(|shader| !shader.stale && shader.error.is_none())
             .and_then(|shader| shader.pipeline.as_ref())
         else {
             return;
@@ -504,6 +560,12 @@ impl Studio {
         let id = self.scenes[self.active].id.as_str();
         let labels = match id {
             "neon-passage" => ["Ambient light", "Palette", "Twist", "Glow"],
+            "tidal-engine" => [
+                "Lamp intensity",
+                "Saturation",
+                "Orbit angle",
+                "Metal polish",
+            ],
             "glass-reef" => ["Sun shafts", "Saturation", "Camera drift", "Coral growth"],
             "lantern-observatory" => ["Dawn light", "Saturation", "Camera angle", "Beam focus"],
             _ => ["Sun height", "Saturation", "Camera angle", "Texture detail"],
@@ -549,10 +611,9 @@ impl Studio {
             });
         let index = self.input().0;
         let can_save = self.export.is_none()
-            && self
-                .shaders
-                .get(&index)
-                .is_some_and(|shader| shader.pipeline.is_some() && shader.error.is_none());
+            && self.shaders.get(&index).is_some_and(|shader| {
+                !shader.stale && shader.pipeline.is_some() && shader.error.is_none()
+            });
         let button = egui::Button::new(
             RichText::new("Save frame as PNG")
                 .color(BACKGROUND)
@@ -629,7 +690,9 @@ impl Studio {
         painter.rect_filled(rect, 10, Color32::from_rgb(8, 11, 12));
         let shader = self.shaders.get(&index);
         let has_pipeline = shader.is_some_and(|shader| shader.pipeline.is_some());
-        let status = if !has_pipeline {
+        let status = if !has_pipeline && shader.is_none() {
+            "Preparing scene…"
+        } else if !has_pipeline {
             "Preview unavailable"
         } else if shader.is_some_and(|shader| shader.error.is_some()) {
             "Last valid shader"
@@ -650,6 +713,15 @@ impl Studio {
                 image_rect,
                 egui::Rect::from_min_max(egui::Pos2::ZERO, egui::pos2(1.0, 1.0)),
                 Color32::WHITE,
+            );
+        }
+        if !has_pipeline {
+            painter.text(
+                rect.center(),
+                egui::Align2::CENTER_CENTER,
+                status,
+                egui::FontId::proportional(16.0),
+                MUTED,
             );
         }
         painter.rect_stroke(
@@ -749,6 +821,16 @@ impl Studio {
             }
             if ui.button("Restart").clicked() {
                 clock.seek(0.0);
+            }
+            for (label, forward) in [("Previous shot", false), ("Next shot", true)] {
+                let target = self.timeline.adjacent_shot(clock.seconds, forward);
+                if ui
+                    .add_enabled(target.is_some(), egui::Button::new(label))
+                    .clicked()
+                    && let Some(time) = target
+                {
+                    clock.seek(time);
+                }
             }
             egui::ComboBox::from_id_salt("story speed")
                 .width(49.0)

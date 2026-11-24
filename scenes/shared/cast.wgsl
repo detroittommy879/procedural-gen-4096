@@ -20,6 +20,11 @@ fn wf_cell(color_in: vec3f, q: vec2f, edge: f32) -> vec3f {
     return wf_ink(color, gem - 0.13, vec3f(0.73, 1.04, 0.70) * pulse, edge);
 }
 
+fn wf_link(q: vec2f, a: vec2f, b: vec2f, width: f32) -> f32 {
+    let ab=b-a;
+    return length(q-a-ab*clamp(dot(q-a,ab)/max(dot(ab,ab),0.00001),0.0,1.0))-width;
+}
+
 fn wf_mica(color_in: vec3f, at: vec2f, sway: f32, stride: f32, direction: f32, scale: f32, cell: f32) -> vec3f {
     if abs(at.x) > 1.8 || at.y > 1.8 || at.y < -0.35 { return color_in; }
     let edge = 0.009 + 0.58 / (min(p.size.x, p.size.y) * scale);
@@ -72,11 +77,26 @@ fn wf_mica(color_in: vec3f, at: vec2f, sway: f32, stride: f32, direction: f32, s
     let tip = q - vec2f(-0.38, 1.43);
     color += vec3f(0.77, 0.29, 0.06) * exp(-dot(tip, tip) * 78.0) * 0.43;
     color = wf_ink(color, length(tip) - 0.056, vec3f(0.99, 0.60, 0.24), edge);
-    if cell > 0.0 {
-        let link = wf_box(q, vec2f(0.62, 0.52), vec2f(0.21, 0.054), 0.031);
-        color = wf_ink(color, link, vec3f(0.46, 0.43, 0.35), edge);
-        color = wf_cell(color, q - vec2f(0.79, 0.58), edge);
+    let badge = wf_box(q, vec2f(-0.42,0.63), vec2f(0.12,0.063), 0.018);
+    color=wf_ink(color,badge,vec3f(0.16,0.17,0.18),edge);
+    let vents=max(badge+0.015,abs(fract(q.x*18.0)-0.5)-0.18);
+    color=wf_ink(color,vents,vec3f(0.69,0.53,0.34),edge);
+    let working=select(0.0,1.0,cell>0.0 || p.action==5u || p.action==7u);
+    let pivot=vec2f(0.41,0.57);
+    let elbow=vec2f(0.53+0.16*working,0.36+0.025*sin(p.time*2.3));
+    let wrist=mix(vec2f(0.47,0.30),vec2f(0.79,0.58),working);
+    color=wf_ink(color,wf_link(q,pivot,elbow,0.074),edge_color,edge);
+    color=wf_ink(color,wf_link(q,pivot,elbow,0.044),shell_light,edge);
+    color=wf_ink(color,wf_link(q,elbow,wrist,0.041),vec3f(0.47,0.58,0.58),edge);
+    color=wf_ink(color,length(q-elbow)-0.061,shell_dark,edge);
+    color=wf_ink(color,length(q-elbow)-0.030,vec3f(0.89,0.61,0.26),edge);
+    for(var finger=0;finger<2;finger++) {
+        let side=select(-1.0,1.0,finger==1);
+        let knuckle=wrist+vec2f(0.045,side*0.071);
+        color=wf_ink(color,wf_link(q,wrist,knuckle,0.022),shell_light,edge);
+        color=wf_ink(color,wf_link(q,knuckle,knuckle+vec2f(0.061,-side*0.026),0.017),shell_light,edge);
     }
+    if cell > 0.0 { color = wf_cell(color,q-wrist,edge); }
     return color;
 }
 
@@ -102,10 +122,81 @@ fn wf_kite(color_in: vec3f, at: vec2f, tilt: f32, scale: f32, scanning: f32) -> 
     return wf_ink(color, glow - 0.087, vec3f(0.44, 0.95, 1.10), edge);
 }
 
-fn wf_story_frame(film: vec2f) -> vec3f {
+// Background performers follow absolute-time paths so scrubbing recreates the formation.
+fn wf_manta(base: vec3f, q: vec2f, beat: f32, depth: f32) -> vec3f {
+    if abs(q.x)>1.2 || q.y>0.6 || q.y< -1.3 {return base;}
+    let span=abs(q.x);
+    let flap=0.24*sin(beat-span*2.8)*span;
+    let spine=0.12*(1.0-span)-0.29*span*span+flap;
+    let wing=abs(q.y-spine)-(0.27*(1.0-smoothstep(0.0,1.0,span)));
+    let fin=max(wing,span-1.0);
+    let whisker=max(abs(q.x-0.08*sin(beat+q.y*4.0))-0.015,abs(q.y+0.66)-0.51);
+    let ink=mix(vec3f(0.043,0.14,0.19),vec3f(0.22,0.48,0.46),smoothstep(-0.22,0.38,q.y)*depth);
+    var col=wf_ink(base,min(fin,whisker),ink,0.022);
+    let speckles=smoothstep(0.73,0.86,noise(q*vec2f(24.0,34.0)));
+    col+=vec3f(0.18,0.48,0.43)*speckles*(1.0-smoothstep(-0.03,0.0,fin))*depth;
+    return col;
+}
+
+fn wf_ensemble(base: vec3f, film: vec2f) -> vec3f {
+    if !wf_enabled(WF_ENSEMBLE) {return base;}
+    var col=base;
+    let t=p.time;
+    if p.action==5u {
+        for(var i=0; i<5; i++) {
+            let k=f32(i);
+            let cx=2.6*fract(t*0.019+0.35+k*0.163)-1.30;
+            let cy=0.16+0.052*sin(t*0.39+k*1.4)-k*0.013;
+            let q=(film-vec2f(cx,cy))/(0.085+0.014*k);
+            col=wf_manta(col,vec2f(q.x,q.y+0.18*q.x),t*1.75+k,0.58+0.08*k);
+        }
+    } else if p.action==2u || p.action==3u {
+        // Birds split around the sweep of Kite's signal, then regroup.
+        for(var i=0;i<13;i++) {
+            let k=f32(i);
+            let row=ceil(k*0.5);
+            let side=select(-1.0,1.0,(i%2)==0);
+            let flock=vec2f(2.75*fract(t*0.020+0.48)-1.18,0.22+0.049*sin(t*0.23));
+            let split=0.5+0.5*sin(t*0.44);
+            let pos=flock+vec2f(-row*0.067,side*row*(0.017+0.010*split));
+            let bird=(film-pos)/0.029;
+            if abs(bird.x)<1.1 && abs(bird.y)<0.9 {
+                let wing=abs(bird.y-(abs(bird.x)*sin(t*5.2+k)*0.53+0.18*sin(abs(bird.x)*3.14)));
+                col=wf_ink(col,max(wing-0.068,abs(bird.x)-0.93),vec3f(0.11,0.17,0.20),0.046);
+            }
+        }
+    } else if p.action==6u || p.action==8u || p.action==1u {
+        for(var i=0;i<4;i++) {
+            let k=f32(i);
+            let phase=t*0.18+k*1.57;
+            let depth=0.5+0.5*cos(phase);
+            let pos=vec2f(sin(phase)*0.47,0.14+0.10*cos(phase)+0.026*sin(t+k));
+            col=wf_kite(col,(film-pos)/(0.014+0.013*depth),0.32*cos(phase),0.02,0.35+0.4*sin(phase)*sin(phase));
+        }
+    }
+    if p.action==4u || p.action==7u {
+        let wet=p.action==4u;
+        for(var i=0;i<9;i++) {
+            let k=f32(i)/8.0;
+            let pos=select(vec2f(-0.69+1.35*k,-0.12+0.02*sin(k*11.0)),vec2f(-0.47+0.63*k,-0.32+0.19*k*k),wet);
+            let power=smoothstep(0.4+k*0.40,0.44+k*0.40,p.progress);
+            let q=film-pos;
+            let housing=wf_box(q,vec2f(0.0,-0.012),vec2f(0.006,0.017)*(1.0-0.42*k),0.001);
+            col=wf_ink(col,housing,vec3f(0.11,0.14,0.15),0.001);
+            let glow=vec3f(0.30,0.95,0.68)*power*(0.75+0.25*cos(t*2.5-k*6.0));
+            col+=glow*exp(-length(q)*105.0);
+        }
+    }
+    return col;
+}
+
+fn wf_story_frame(screen: vec2f) -> vec3f {
+    let offset=vec2f(p.frame_x*min(1.0,p.size.x/p.size.y),p.frame_y);
+    let film=select(screen,screen/max(1.0,p.zoom)+offset,wf_enabled(WF_CAMERA));
     var color = scene(film);
     if p.action == 0u { return color; }
 
+    color = wf_ensemble(color, film);
     let progress = smoothstep(0.02, 0.98, p.progress);
     let pulse = sin(p.time * 1.8);
     var x = mix(-0.42, -0.08, progress);
@@ -140,9 +231,19 @@ fn wf_story_frame(film: vec2f) -> vec3f {
             x = mix(-0.40, -0.032, smoothstep(0.01, 0.82, progress));
             y += 0.043 * pulse + 0.099;
             carry = step(0.74, p.progress);
-            let gem = (film - vec2f(0.115, -0.235 + 0.016 * sin(p.time * 2.0))) / 0.11;
+            let shore=vec2f(0.115,-0.235+0.016*sin(p.time*2.0));
+            let screen_width=min(1.0,p.size.x/min(p.size.x,p.size.y)*0.76);
+            let grip=vec2f(x*screen_width,y)+vec2f(0.79,0.58)*0.107;
+            let gem=(film-mix(shore,grip,smoothstep(0.64,0.74,p.progress)))/0.107;
             if carry == 0.0 && length(gem) < 2.0 { color = wf_cell(color, gem, 0.028); }
             scan = 0.75;
+        }
+        case 8u: {
+            let reach=smoothstep(0.04,0.45,progress);
+            x=mix(-0.36,-0.09,reach);
+            carry=1.0;
+            drone=vec2f(0.09+0.17*reach,0.19+0.10*sin(progress*3.14));
+            scan=0.22+0.72*reach;
         }
         case 6u: {
             x = -0.12 + 0.06 * sin(progress * TAU);
@@ -157,6 +258,15 @@ fn wf_story_frame(film: vec2f) -> vec3f {
             y -= 0.014;
             carry = 1.0 - step(0.54, p.progress);
             scan = 0.85 * (1.0 - step(0.54, p.progress));
+            if p.progress>=0.54 && p.progress<0.61 {
+                let screen_width=min(1.0,p.size.x/min(p.size.x,p.size.y)*0.76);
+                let grip=vec2f(x*screen_width,y)+vec2f(0.79,0.58)*0.107;
+                let socket=vec2f(0.13+(seed_part(30u)-0.5)*0.19-(p.camera-0.5)*0.17,0.051);
+                let lift=smoothstep(0.54,0.61,p.progress);
+                let current=mix(grip,socket,lift)+vec2f(0.0,sin(lift*3.14159)*0.055);
+                let gem=(film-current)/mix(0.107,0.035,lift);
+                if length(gem)<2.0 {color=wf_cell(color,gem,0.023);}
+            }
             drone.x -= 0.16 * smoothstep(0.60, 0.95, progress);
         }
         default: {}

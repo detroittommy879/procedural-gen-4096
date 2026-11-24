@@ -8,11 +8,35 @@
       "seconds": 210,
       "action": "blackout",
       "seed": 63,
-      "light": [0.11, 0.07],
+      "light": [
+        0.11,
+        0.07
+      ],
       "cues": [
-        {"at": 0, "text": "At the end of the valley, the last signal lamp went out."},
-        {"at": 50, "text": "Mica rolled out to check the tower. Its power cell was gone."},
-        {"at": 135, "text": "Kite swept the ground with a blue beam. Something answered from beyond the hills."}
+        {
+          "at": 0,
+          "text": "At the end of the valley, the last signal lamp went out.",
+          "camera": {
+            "from": [0, 0, 1],
+            "to": [-0.07, 0.05, 1.23]
+          }
+        },
+        {
+          "at": 50,
+          "text": "Mica rolled out to check the tower. Its power cell was gone.",
+          "camera": {
+            "from": [-0.31, -0.25, 2],
+            "to": [-0.21, -0.22, 2.3]
+          }
+        },
+        {
+          "at": 135,
+          "text": "Kite swept the ground with a blue beam. Something answered from beyond the hills.",
+          "camera": {
+            "from": [-0.02, -0.14, 1.56],
+            "to": [0.03, -0.09, 1.8]
+          }
+        }
       ]
     },
     {
@@ -20,11 +44,35 @@
       "scene": "lavender-fields",
       "seconds": 240,
       "action": "listen",
-      "light": [0.30, 0.48],
+      "light": [
+        0.3,
+        0.48
+      ],
       "cues": [
-        {"at": 0, "text": "They followed the rows up to the tree, where the wind briefly fell quiet."},
-        {"at": 75, "text": "The pulse was too regular for thunder. Three taps, a pause, then three more."},
-        {"at": 160, "text": "Kite played the pattern back. Far ahead, the canyon sent an echo."}
+        {
+          "at": 0,
+          "text": "They followed the rows up to the tree, where the wind briefly fell quiet.",
+          "camera": {
+            "from": [0, 0, 1],
+            "to": [-0.04, 0.04, 1.16]
+          }
+        },
+        {
+          "at": 75,
+          "text": "The pulse was too regular for thunder. Three taps, a pause, then three more.",
+          "camera": {
+            "from": [-0.27, -0.18, 1.8],
+            "to": [-0.2, -0.2, 2.05]
+          }
+        },
+        {
+          "at": 160,
+          "text": "Kite played the pattern back. Far ahead, the canyon sent an echo.",
+          "camera": {
+            "from": [0.04, 0.13, 1.57],
+            "to": [0.01, 0.1, 1.35]
+          }
+        }
       ]
     },
     {
@@ -32,11 +80,35 @@
       "scene": "red-arch",
       "seconds": 240,
       "action": "cross",
-      "light": [0.38, 0.23],
+      "light": [
+        0.38,
+        0.23
+      ],
       "cues": [
-        {"at": 0, "text": "The old service road disappeared under red sand."},
-        {"at": 65, "text": "Kite flew through the arch first, then circled low to mark solid ground."},
-        {"at": 145, "text": "Beyond the pass, a narrow track led down toward cold blue water."}
+        {
+          "at": 0,
+          "text": "The old service road disappeared under red sand.",
+          "camera": {
+            "from": [0, 0.02, 1.02],
+            "to": [-0.09, 0.04, 1.18]
+          }
+        },
+        {
+          "at": 65,
+          "text": "Kite flew through the arch first, then circled low to mark solid ground.",
+          "camera": {
+            "from": [-0.26, -0.18, 1.55],
+            "to": [0.12, -0.2, 1.69]
+          }
+        },
+        {
+          "at": 145,
+          "text": "Beyond the pass, a narrow track led down toward cold blue water.",
+          "camera": {
+            "from": [0.12, -0.22, 1.42],
+            "to": [0.34, -0.21, 1.7]
+          }
+        }
       ]
     },
     {
@@ -44,11 +116,35 @@
       "scene": "alpine-lake",
       "seconds": 240,
       "action": "float",
-      "light": [0.34, 0.55],
+      "light": [
+        0.34,
+        0.55
+      ],
       "cues": [
-        {"at": 0, "text": "The signal carried better over the lake. It was coming from beneath the surface."},
-        {"at": 90, "text": "Mica checked both hatch seals. Kite waited for the reply before descending."},
-        {"at": 170, "text": "A chain of green lights switched on under the water, one at a time."}
+        {
+          "at": 0,
+          "text": "The signal carried better over the lake. It was coming from beneath the surface.",
+          "camera": {
+            "from": [0, 0, 1],
+            "to": [0.05, 0.02, 1.2]
+          }
+        },
+        {
+          "at": 90,
+          "text": "Mica checked both hatch seals. Kite waited for the reply before descending.",
+          "camera": {
+            "from": [-0.21, -0.18, 1.9],
+            "to": [-0.11, -0.16, 2.1]
+          }
+        },
+        {
+          "at": 170,
+          "text": "A chain of green lights switched on under the water, one at a time.",
+          "camera": {
+            "from": [-0.08, -0.22, 1.48],
+            "to": [0.05, -0.14, 1.66]
+          }
+        }
       ]
     },
     {
@@ -57,23 +153,105 @@
       "seconds": 300,
       "action": "recover",
       "seed": 812,
-      "light": [0.32, 0.74],
+      "light": [
+        0.32,
+        0.74
+      ],
       "cues": [
-        {"at": 0, "text": "The lamp's cell had lodged in a reef beneath the old intake tunnel."},
-        {"at": 95, "text": "Every time the cell pulsed, the shoal turned as one."},
-        {"at": 205, "text": "Mica pried it loose. A maintenance gate opened on the far side of the reef."}
+        {
+          "at": 0,
+          "text": "The lamp's cell had lodged in a reef beneath the old intake tunnel.",
+          "camera": {
+            "from": [0, 0.04, 1],
+            "to": [0, 0.09, 1.22]
+          }
+        },
+        {
+          "at": 95,
+          "text": "Every time the cell pulsed, the shoal turned as one.",
+          "camera": {
+            "from": [0, 0.12, 1.55],
+            "to": [0.04, 0.15, 1.9]
+          }
+        },
+        {
+          "at": 205,
+          "text": "Mica pried it loose. A maintenance gate opened on the far side of the reef.",
+          "camera": {
+            "from": [0.03, -0.18, 2.1],
+            "to": [-0.025, -0.2, 2.37]
+          }
+        }
+      ]
+    },
+    {
+      "title": "The tidal engine",
+      "scene": "tidal-engine",
+      "seconds": 150,
+      "action": "synchronize",
+      "seed": 707,
+      "light": [
+        0.36,
+        0.8
+      ],
+      "cues": [
+        {
+          "at": 0,
+          "text": "Behind the gate, a brass tide computer stood ankle-deep in water. Its three rings had drifted out of phase.",
+          "camera": {
+            "from": [0, 0, 1],
+            "to": [0, 0.055, 1.32]
+          }
+        },
+        {
+          "at": 40,
+          "text": "Four service drones held station. Kite copied the pulse of the cell into the innermost ring.",
+          "camera": {
+            "from": [-0.09, -0.05, 1.49],
+            "to": [0, 0.04, 1.72]
+          }
+        },
+        {
+          "at": 92,
+          "text": "One axle caught, then another. Light ran along the flooded galleries toward the return line.",
+          "camera": {
+            "from": [0, 0.02, 1.95],
+            "to": [0.01, 0.04, 1.2]
+          }
+        }
       ]
     },
     {
       "title": "The return line",
       "scene": "neon-passage",
-      "seconds": 300,
+      "seconds": 150,
       "action": "return",
       "seed": 4081205892,
       "cues": [
-        {"at": 0, "text": "The gate led to a transit line that hadn't run in years."},
-        {"at": 100, "text": "Kite fed the cell's pulse to the rails. The buried line lit up, ring by ring."},
-        {"at": 200, "text": "Mica held the cell close as the line carried them back up the valley."}
+        {
+          "at": 0,
+          "text": "The synchronized rings released the lock. A magenta line appeared on the rails.",
+          "camera": {
+            "from": [0, 0, 1],
+            "to": [0.01, 0.04, 1.13]
+          }
+        },
+        {
+          "at": 45,
+          "text": "Kite fed the cell's pulse to the rails. The buried line lit up, ring by ring.",
+          "camera": {
+            "from": [-0.09, -0.13, 1.62],
+            "to": [-0.095, -0.16, 1.81]
+          }
+        },
+        {
+          "at": 100,
+          "text": "Mica held the cell close as the line carried them back up the valley.",
+          "camera": {
+            "from": [-0.12, -0.12, 1.68],
+            "to": [0, -0.04, 1.12]
+          }
+        }
       ]
     },
     {
@@ -82,12 +260,43 @@
       "seconds": 270,
       "action": "relight",
       "seed": 63,
-      "light": [0.10, 0.63],
+      "light": [
+        0.1,
+        0.63
+      ],
       "cues": [
-        {"at": 0, "text": "The tower was still silent when they arrived."},
-        {"at": 75, "text": "Kite steadied the cell while Mica lined up the contacts."},
-        {"at": 155, "text": "The lamp turned once. Across the valley, other stations began to answer."},
-        {"at": 235, "text": "Mica and Kite stayed to watch the sunrise."}
+        {
+          "at": 0,
+          "text": "The tower was still silent when they arrived.",
+          "camera": {
+            "from": [0, 0, 1],
+            "to": [0.03, 0.04, 1.22]
+          }
+        },
+        {
+          "at": 75,
+          "text": "Kite steadied the cell while Mica lined up the contacts.",
+          "camera": {
+            "from": [-0.12, -0.19, 1.84],
+            "to": [0.2, -0.15, 1.72]
+          }
+        },
+        {
+          "at": 155,
+          "text": "The lamp turned once. Across the valley, other stations began to answer.",
+          "camera": {
+            "from": [0.13, 0.09, 1.9],
+            "to": [0.11, 0.08, 1.46]
+          }
+        },
+        {
+          "at": 235,
+          "text": "Mica and Kite stayed to watch the sunrise.",
+          "camera": {
+            "from": [0.02, 0.04, 1.23],
+            "to": [0, 0, 1]
+          }
+        }
       ]
     }
   ]

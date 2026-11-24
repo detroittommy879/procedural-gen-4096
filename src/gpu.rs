@@ -31,6 +31,9 @@ impl Effects {
     pub const SHADOWS: u32 = 1 << 3;
     pub const GRAIN: u32 = 1 << 4;
 
+    pub const CAMERA: u32 = 1 << 5;
+    pub const ENSEMBLE: u32 = 1 << 6;
+
     pub fn has(self, bit: u32) -> bool {
         self.0 & bit != 0
     }
@@ -42,7 +45,15 @@ impl Effects {
 
 impl Default for Effects {
     fn default() -> Self {
-        Self(Self::CLOUDS | Self::REFLECTIONS | Self::PARTICLES | Self::SHADOWS | Self::GRAIN)
+        Self(
+            Self::CLOUDS
+                | Self::REFLECTIONS
+                | Self::PARTICLES
+                | Self::SHADOWS
+                | Self::GRAIN
+                | Self::CAMERA
+                | Self::ENSEMBLE,
+        )
     }
 }
 
@@ -51,6 +62,7 @@ pub struct Shot {
     pub action: u32,
     pub progress: f32,
     pub transition: f32,
+    pub camera_frame: [f32; 3],
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -71,6 +83,7 @@ impl RenderInput {
                 action: 0,
                 progress: 0.0,
                 transition: 1.0,
+                camera_frame: [0.0, 0.0, 1.0],
             },
         }
     }
@@ -91,9 +104,10 @@ struct Uniforms {
     action: u32,
     progress: f32,
     transition: f32,
-    padding: [f32; 3],
+    camera_frame: [f32; 3],
 }
 
+#[derive(Clone)]
 pub struct Renderer {
     pub device: w::Device,
     pub queue: w::Queue,
@@ -159,14 +173,17 @@ impl Renderer {
     }
 
     pub fn compile(&self, source: &str, name: &str) -> Result<w::RenderPipeline, String> {
+        let path = crate::scenes::directory().join("shared/cast.wgsl");
+        let cast = match std::fs::read_to_string(&path) {
+            Ok(text) => std::borrow::Cow::Owned(text),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                std::borrow::Cow::Borrowed(include_str!("../scenes/shared/cast.wgsl"))
+            }
+            Err(error) => return Err(format!("{}: {error}", path.display())),
+        };
         let device = &self.device;
         device.push_error_scope(w::ErrorFilter::Validation);
-        let source = format!(
-            "{}\n{}\n{}",
-            source,
-            include_str!("common.wgsl"),
-            include_str!("actors.wgsl")
-        );
+        let source = format!("{}\n{}\n{}", source, include_str!("common.wgsl"), cast);
         let shader = device.create_shader_module(w::ShaderModuleDescriptor {
             label: Some(name),
             source: w::ShaderSource::Wgsl(source.into()),
@@ -246,7 +263,7 @@ impl Renderer {
             action: input.shot.action,
             progress: input.shot.progress,
             transition: input.shot.transition,
-            padding: [0.0; 3],
+            camera_frame: input.shot.camera_frame,
         };
         let buffer = self
             .device

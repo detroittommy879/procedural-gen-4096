@@ -1,5 +1,12 @@
 # Agent log
 
+## 2026-11-24 · Tidal Engine and story direction
+
+- Added an animated flooded machine hall with nested geared rings, orbiting weights, fans, and water reflections. Split the return journey into two chapters and authored 25 camera shots across the 30-minute story. Added service drones, flocks, reef rays, relays, and a cell Mica can pick up and deliver.
+- Added shot navigation, independent camera and supporting-cast switches, and F5 reload for the shared character shader. Existing camera-free story files still use the wide view.
+- A reserved WGSL name failed validation during development. Renamed it and rendered all eight chapters on Windows. First use of the new shader also exposed a UI stall. Moved compilation to a background thread and tested seeking from 20:30 to 21:10 while the chamber prepared.
+- Release build, strict Clippy, and three timeline tests passed. Captured a 48-frame animated preview from the renderer. In the native app an intentional shared-shader error retained the last valid image and disabled export.
+
 ## 2026-11-24 · Motion and story
 
 - Added animation to the original scenes and built Lantern Observatory and Glass Reef. Studio can play, pause, rewind, or set a scene time. Cloud, reflection, particle, cast-shadow, and grain switches change the render independently.
