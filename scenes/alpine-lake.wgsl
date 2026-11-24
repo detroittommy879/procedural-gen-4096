@@ -71,7 +71,10 @@ fn lake_stone(point: vec3f, dist: f32, variant: f32, sun: vec3f) -> vec3f {
     var base = mix(mix(rock, evergreen, trees), snow, cover);
     base = mix(shore, base, smoothstep(-0.04, 0.54, point.y));
     let diffuse = max(dot(normal, sun), 0.0);
-    let shadow = lake_land((point + sun * 1.8).xz, variant) > point.y + sun.y * 1.8 + 0.17;
+    var shadow = false;
+    if wf_enabled(WF_SHADOWS) {
+        shadow = lake_land((point + sun * 1.8).xz, variant) > point.y + sun.y * 1.8 + 0.17;
+    }
     let warm = mix(vec3f(1.34, 0.97, 0.71), vec3f(1.13, 1.12, 1.07), p.light);
     let lit = base * (vec3f(0.48, 0.60, 0.78) + warm * diffuse * select(0.98, 0.27, shadow));
     let haze = vec3f(0.40, 0.55, 0.69);
@@ -98,12 +101,15 @@ fn scene(film: vec2f) -> vec3f {
 
     let point = eye + rd * water_distance;
     let q = point.xz;
-    let waves = (noise(q * vec2f(2.7, 9.0)) - 0.5) * 0.040;
-    let swells = (noise(q * vec2f(1.8, 4.4) + 6.0) - 0.5) * 0.043;
+    let waves = (noise(q * vec2f(2.7, 9.0) + vec2f(p.time * 0.44, p.time * 0.67)) - 0.5) * 0.040;
+    let swells = (noise(q * vec2f(1.8, 4.4) + 6.0 + vec2f(p.time * -0.29, p.time * 0.56)) - 0.5) * 0.043;
     let normal = normalize(vec3f(waves + swells * 0.35, 1.0, swells + waves * 0.15));
     let reflected = reflect(rd, normal);
-    var reflection = atmosphere(reflected, sun, vec3f(0.07, 0.35, 0.57), variant * 37.0);
-    if reflected.y < 0.61 {
+    var reflection = sky;
+    if wf_enabled(WF_REFLECTIONS) {
+        reflection = atmosphere(reflected, sun, vec3f(0.07, 0.35, 0.57), variant * 37.0);
+    }
+    if wf_enabled(WF_REFLECTIONS) && reflected.y < 0.61 {
         let bounce_origin = point + vec3f(0.0, 0.075, 0.0);
         let hit = lake_trace(bounce_origin, reflected, 100.0, variant, 72u);
         if hit >= 0.0 {
@@ -113,7 +119,7 @@ fn scene(film: vec2f) -> vec3f {
     let deep = max(0.0, -lake_land(q, variant));
     let stones = fbm(q * 3.1 + variant * 7.0) - 0.5;
     let bottom = mix(vec3f(0.17, 0.39, 0.33), vec3f(0.023, 0.22, 0.27), smoothstep(0.15, 1.0, deep));
-    let fresnel = 0.28 + 0.67 * pow(1.0 - abs(dot(normal, -rd)), 3.0);
+    let fresnel = select(0.11, 0.28 + 0.67 * pow(1.0 - abs(dot(normal, -rd)), 3.0), wf_enabled(WF_REFLECTIONS));
     let glint = pow(max(dot(reflected, sun), 0.0), 170.0) * (0.36 + 0.55 * noise(q * 7.0));
     let foam = (1.0 - smoothstep(0.005, 0.11, deep)) * 0.12 * smoothstep(0.52, 0.73, noise(q * 3.3));
     return mix(bottom + stones * 0.085, reflection * vec3f(0.73, 0.87, 0.93), fresnel)

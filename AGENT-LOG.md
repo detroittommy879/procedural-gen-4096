@@ -1,5 +1,11 @@
 # Agent log
 
+## 2026-11-24 · Motion and story
+
+- Added animation to the original scenes and built Lantern Observatory and Glass Reef. Studio can play, pause, rewind, or set a scene time. Cloud, reflection, particle, cast-shadow, and grain switches change the render independently.
+- Built *The Last Light*, a 30-minute timeline with seven chapters, timed captions, and shader-drawn Mica and Kite. Chapter data lives in `scenes/story.json`. Reload validates the timeline, and preview resolution drops during playback to avoid piling up GPU work. PNG export uses the selected frame at full resolution.
+- Rendered every chapter and ran the whole timeline at 60× on Windows. Confirmed the last chapter stops at 30:00, independent reflection switching, and story edits via F5. Increased the preview footer space after finding clipped playback controls. Release build, both timeline tests, and strict Clippy passed.
+
 ## 2026-11-24
 
 - Built Wildframe as a standalone Rust/egui project. A shared wgpu renderer drives the preview and headless PNG export. Four shader scenes render all artwork procedurally. PNGs are encoded off the UI thread and moved into place after encoding succeeds.

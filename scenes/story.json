@@ -1,0 +1,94 @@
+{
+  "title": "The Last Light",
+  "premise": "A maintenance rover and a survey drone follow a faint signal to bring a stranded station back online.",
+  "chapters": [
+    {
+      "title": "The blackout",
+      "scene": "lantern-observatory",
+      "seconds": 210,
+      "action": "blackout",
+      "seed": 63,
+      "light": [0.11, 0.07],
+      "cues": [
+        {"at": 0, "text": "At the end of the valley, the last signal lamp went out."},
+        {"at": 50, "text": "Mica rolled out to check the tower. Its power cell was gone."},
+        {"at": 135, "text": "Kite swept the ground with a blue beam. Something answered from beyond the hills."}
+      ]
+    },
+    {
+      "title": "The listening field",
+      "scene": "lavender-fields",
+      "seconds": 240,
+      "action": "listen",
+      "light": [0.30, 0.48],
+      "cues": [
+        {"at": 0, "text": "They followed the rows up to the tree, where the wind briefly fell quiet."},
+        {"at": 75, "text": "The pulse was too regular for thunder. Three taps, a pause, then three more."},
+        {"at": 160, "text": "Kite played the pattern back. Far ahead, the canyon sent an echo."}
+      ]
+    },
+    {
+      "title": "Across the red pass",
+      "scene": "red-arch",
+      "seconds": 240,
+      "action": "cross",
+      "light": [0.38, 0.23],
+      "cues": [
+        {"at": 0, "text": "The old service road disappeared under red sand."},
+        {"at": 65, "text": "Kite flew through the arch first, then circled low to mark solid ground."},
+        {"at": 145, "text": "Beyond the pass, a narrow track led down toward cold blue water."}
+      ]
+    },
+    {
+      "title": "Under the peaks",
+      "scene": "alpine-lake",
+      "seconds": 240,
+      "action": "float",
+      "light": [0.34, 0.55],
+      "cues": [
+        {"at": 0, "text": "The signal carried better over the lake. It was coming from beneath the surface."},
+        {"at": 90, "text": "Mica checked both hatch seals. Kite waited for the reply before descending."},
+        {"at": 170, "text": "A chain of green lights switched on under the water, one at a time."}
+      ]
+    },
+    {
+      "title": "The quiet reef",
+      "scene": "glass-reef",
+      "seconds": 300,
+      "action": "recover",
+      "seed": 812,
+      "light": [0.32, 0.74],
+      "cues": [
+        {"at": 0, "text": "The lamp's cell had lodged in a reef beneath the old intake tunnel."},
+        {"at": 95, "text": "Every time the cell pulsed, the shoal turned as one."},
+        {"at": 205, "text": "Mica pried it loose. A maintenance gate opened on the far side of the reef."}
+      ]
+    },
+    {
+      "title": "The return line",
+      "scene": "neon-passage",
+      "seconds": 300,
+      "action": "return",
+      "seed": 4081205892,
+      "cues": [
+        {"at": 0, "text": "The gate led to a transit line that hadn't run in years."},
+        {"at": 100, "text": "Kite fed the cell's pulse to the rails. The buried line lit up, ring by ring."},
+        {"at": 200, "text": "Mica held the cell close as the line carried them back up the valley."}
+      ]
+    },
+    {
+      "title": "A light for the valley",
+      "scene": "lantern-observatory",
+      "seconds": 270,
+      "action": "relight",
+      "seed": 63,
+      "light": [0.10, 0.63],
+      "cues": [
+        {"at": 0, "text": "The tower was still silent when they arrived."},
+        {"at": 75, "text": "Kite steadied the cell while Mica lined up the contacts."},
+        {"at": 155, "text": "The lamp turned once. Across the valley, other stations began to answer."},
+        {"at": 235, "text": "Mica and Kite stayed to watch the sunrise."}
+      ]
+    }
+  ]
+}

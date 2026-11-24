@@ -1,6 +1,8 @@
 # Wildframe
 
-A Rust and egui wallpaper studio with four GPU-rendered scenes. All geometry, textures, lighting, and reflections are generated in WGSL.
+Wildframe is a Rust and egui studio for animated procedural wallpapers. The six scenes, from Alpine Lake to Glass Reef, render on the GPU from editable WGSL.
+
+![Mica and Kite carry a glowing power cell through Neon Passage](docs/story-preview.png)
 
 ## Run
 
@@ -8,20 +10,22 @@ A Rust and egui wallpaper studio with four GPU-rendered scenes. All geometry, te
 cargo run --release --locked
 ```
 
-Pick **Alpine Lake**, **Red Arch**, **Lavender Fields**, or **Neon Passage**. Use **Shuffle** for a new seed or enter a seed to revisit a composition. **Reset** restores the scene's default settings. **Save PNG** offers Full HD, QHD, 4K UHD, ultrawide, and portrait output. The preview follows the selected aspect ratio.
+- **Studio** lets you shuffle the seed, set lighting and camera controls, play or pause the motion, and enter a frame time in seconds.
+- **Story** plays *The Last Light*, a 30-minute, seven-chapter trip with Mica the rover and Kite the drone. Select a chapter or scrub the timeline. Playback speeds go up to 60×.
+- **Render effects** switches clouds, reflections, particles, cast shadows, and film grain independently. Effects apply where the scene uses them.
+- **Save frame as PNG** exports the current frame. Available formats include 4K UHD, ultrawide, and portrait.
 
-## Edit or add scenes while the app runs
+## Add or edit scenes and chapters
 
-Edit a file under `scenes/`, or duplicate one and rename the copy. Press **F5** or click **Reload scenes**. The app displays a shader error with the line number if compilation fails. When editing the selected scene, the last valid preview remains available while you fix it.
+Edit or duplicate a file in [scenes/](scenes/) and press **F5** or click **Reload files**. Every scene defines `fn scene(film: vec2f) -> vec3f`. The optional `// name:` and `// description:` headers supply the display text. The shared uniforms are `p.seed`, `p.time` in seconds, and `p.light`, `p.color`, `p.camera`, and `p.detail` from 0 to 1. See [common.wgsl](src/common.wgsl) for color, noise, and effect switches.
 
-Each file defines `fn scene(film: vec2f) -> vec3f`. Optional `// name:` and `// description:` lines supply the display text. `film` is centered with Y pointing up. The shared uniforms are `p.seed` and the four controls `p.light`, `p.color`, `p.camera`, and `p.detail` (each 0–1). See `src/common.wgsl` for shared functions and the color grade.
-
-The executable includes the four defaults. If you move it out of the project and want editable scenes, put the `scenes` folder next to it.
+Edit [scenes/story.json](scenes/story.json) to rearrange chapters, choose scene IDs, adjust durations and light, or change the timed captions. Each chapter can use an `action` from the bundled example to direct the characters, or omit the action for scenery alone. Reload applies scene and story edits in the running app. The executable embeds the defaults and looks for editable files in a `scenes` directory alongside it when moved out of the project.
 
 ## Render from a terminal
 
-The command uses the scene's default controls and the supplied seed and dimensions.
-
 ```powershell
-cargo run --release --locked -- --render neon-passage 915 3840 2160 neon.png
+cargo run --release --locked -- --render neon-passage 915 3840 2160 tunnel.png 12.5
+cargo run --release --locked -- --story 1435 1920 1080 return-line.png
 ```
+
+The optional last argument to `--render` is the scene time. `--story` takes an absolute story time in seconds.

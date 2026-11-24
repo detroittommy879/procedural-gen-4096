@@ -6,11 +6,26 @@ struct Parameters {
     color: f32,
     camera: f32,
     detail: f32,
+    time: f32,
+    effects: u32,
+    action: u32,
+    progress: f32,
+    transition: f32,
 }
 
 @group(0) @binding(0) var<uniform> p: Parameters;
 
 const TAU: f32 = 6.28318531;
+
+const WF_CLOUDS: u32 = 1u;
+const WF_REFLECTIONS: u32 = 2u;
+const WF_PARTICLES: u32 = 4u;
+const WF_SHADOWS: u32 = 8u;
+const WF_GRAIN: u32 = 16u;
+
+fn wf_enabled(flag: u32) -> bool {
+    return (p.effects & flag) != 0u;
+}
 
 fn hash(p0: vec2f) -> f32 {
     var q = fract(vec3f(p0.xyx) * 0.1031);
@@ -64,8 +79,9 @@ fn atmosphere(rd: vec3f, sun: vec3f, tint: vec3f, offset: f32) -> vec3f {
     sky += vec3f(1.0, 0.50 + 0.25 * p.light, 0.22) * pow(alignment, 10.0) * (0.45 + warm * 0.23);
     sky += vec3f(1.0, 0.78, 0.51) * (0.25 * pow(alignment, 90.0) + 2.6 * smoothstep(0.99955, 0.99983, alignment));
 
+    if !wf_enabled(WF_CLOUDS) { return sky; }
     let plane = rd.xz / (0.13 + elevation);
-    let uv = plane * vec2f(2.1, 4.0) + vec2f(offset, offset * 0.77);
+    let uv = plane * vec2f(2.1, 4.0) + vec2f(offset, offset * 0.77) + vec2f(p.time * 0.032, -p.time * 0.006);
     let warp = vec2f(noise(uv * 0.44 + 3.0), noise(uv * 0.44 + 14.0));
     let cloud = fbm(uv + warp * 1.5);
     let coverage = smoothstep(0.53, 0.73, cloud) * smoothstep(0.014, 0.10, elevation);
@@ -97,10 +113,11 @@ fn pixel(@builtin(position) position: vec4f) -> @location(0) vec4f {
     var color: vec3f;
     if p.samples > 1u {
         let shift = vec2f(0.38, -0.29) / min(p.size.x, p.size.y);
-        color = mix(scene(film - shift), scene(film + shift), 0.5);
+        color = mix(wf_story_frame(film - shift), wf_story_frame(film + shift), 0.5);
     } else {
-        color = scene(film);
+        color = wf_story_frame(film);
     }
-    let grain = (hash(position.xy + vec2f(seed_part(45u) * 19.0)) - 0.5) / 180.0;
-    return vec4f(grade(color, film) + grain, 1.0);
+    let grain = select(0.0, (hash(position.xy + vec2f(seed_part(45u) * 19.0)) - 0.5) / 180.0, wf_enabled(WF_GRAIN));
+    let fade = smoothstep(0.0, 1.0, p.transition);
+    return vec4f((grade(color, film) + grain) * fade, 1.0);
 }

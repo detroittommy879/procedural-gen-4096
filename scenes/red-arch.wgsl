@@ -95,16 +95,24 @@ fn scene(film: vec2f) -> vec3f {
     let rock = mix(vec3f(0.30, 0.083, 0.054), vec3f(0.92, 0.49, 0.27), smoothstep(0.10, 0.93, bands * 0.91 + variations * 0.25));
     let base = mix(sand, rock, max(hit.y, (1.0 - smoothstep(0.55, 0.92, normal.y)) * 0.82));
     var shade = 1.0;
-    var shadow_t = 0.13;
-    for (var i = 0; i < 17; i++) {
-        let probe = desert_map(point + normal * 0.09 + sun * shadow_t, variant).x;
-        shade = min(shade, 7.0 * max(0.0, probe) / shadow_t);
-        if shade < 0.06 || shadow_t > 18.0 { break; }
-        shadow_t += clamp(probe * 0.85, 0.12, 2.5);
+    if wf_enabled(WF_SHADOWS) {
+        var shadow_t = 0.13;
+        for (var i = 0; i < 17; i++) {
+            let probe = desert_map(point + normal * 0.09 + sun * shadow_t, variant).x;
+            shade = min(shade, 7.0 * max(0.0, probe) / shadow_t);
+            if shade < 0.06 || shadow_t > 18.0 { break; }
+            shadow_t += clamp(probe * 0.85, 0.12, 2.5);
+        }
     }
     let direct = max(dot(normal, sun), 0.0) * shade;
     let sun_tint = mix(vec3f(1.50, 1.02, 0.65), vec3f(1.18, 1.08, 0.96), p.light);
     let ambient = vec3f(0.56, 0.56, 0.67) * (0.72 + 0.28 * normal.y);
     let lit = base * (ambient + sun_tint * direct * 0.86);
-    return mix(lit, haze, 1.0 - exp(-hit.x * 0.0062));
+    var color = mix(lit, haze, 1.0 - exp(-hit.x * 0.0062));
+    if wf_enabled(WF_PARTICLES) {
+        let gust = fbm(film * vec2f(7.9, 41.0) + vec2f(-p.time * 0.48, variant * 23.0));
+        let near_ground = exp(-abs(film.y + 0.13 + film.x * 0.11) * 14.0);
+        color = mix(color, haze * vec3f(1.1, 1.01, 0.92), near_ground * smoothstep(0.48, 0.78, gust) * 0.24);
+    }
+    return color;
 }

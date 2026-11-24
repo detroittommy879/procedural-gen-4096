@@ -15,7 +15,7 @@ pub struct Scene {
     pub badge: [u8; 3],
 }
 
-const BUNDLED: [(&str, &str, [u8; 3], Settings); 4] = [
+const BUNDLED: [(&str, &str, [u8; 3], Settings); 6] = [
     (
         "alpine-lake",
         include_str!("../scenes/alpine-lake.wgsl"),
@@ -62,6 +62,30 @@ const BUNDLED: [(&str, &str, [u8; 3], Settings); 4] = [
             color: 0.58,
             camera: 0.80,
             detail: 0.53,
+        },
+    ),
+    (
+        "lantern-observatory",
+        include_str!("../scenes/lantern-observatory.wgsl"),
+        [242, 198, 130],
+        Settings {
+            seed: 63,
+            light: 0.24,
+            color: 0.57,
+            camera: 0.48,
+            detail: 0.58,
+        },
+    ),
+    (
+        "glass-reef",
+        include_str!("../scenes/glass-reef.wgsl"),
+        [112, 225, 191],
+        Settings {
+            seed: 812,
+            light: 0.61,
+            color: 0.58,
+            camera: 0.51,
+            detail: 0.54,
         },
     ),
 ];

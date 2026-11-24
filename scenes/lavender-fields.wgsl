@@ -21,7 +21,8 @@ fn rows_bloom(q: vec2f, variant: f32) -> f32 {
 }
 
 fn rows_land(q: vec2f, variant: f32) -> f32 {
-    let cluster = noise(q * vec2f(2.8, 3.9) + variant * 9.0);
+    let wind = vec2f(sin(p.time * 1.1) * 0.21, cos(p.time * 0.81) * 0.15 - 0.15);
+    let cluster = noise(q * vec2f(2.8, 3.9) + variant * 9.0 + wind);
     return rows_ground(q, variant) + rows_bloom(q, variant) * (0.35 + cluster * 0.22);
 }
 
@@ -119,7 +120,8 @@ fn scene(film: vec2f) -> vec3f {
     let q = point.xz;
     let bloom = rows_bloom(q, variant);
     let plant_scale = mix(11.0, 24.0, p.detail);
-    let petal = noise(q * vec2f(plant_scale, plant_scale * 1.36) + variant * 51.0);
+    let wind = vec2f(sin(p.time * 1.1 + q.y * 0.39) - sin(q.y * 0.39), sin(p.time * 0.83));
+    let petal = noise(q * vec2f(plant_scale, plant_scale * 1.36) + variant * 51.0 + wind * 0.21);
     let cluster = fbm(q * 2.7 + variant * 73.0);
     let stems = noise((q + vec2f(petal * 0.02, 0.0)) * vec2f(plant_scale * 2.9, plant_scale * 0.77));
     let flowers_detail = smoothstep(0.42, 0.85, stems * 0.67 + petal * 0.38);
@@ -133,5 +135,13 @@ fn scene(film: vec2f) -> vec3f {
     let slope = clamp((rows_land(q - vec2f(0.13, 0.0), variant) - rows_land(q + vec2f(0.13, 0.0), variant)) * 1.63, -0.55, 0.55);
     let light_color = mix(vec3f(1.26, 1.03, 0.85), vec3f(1.03, 1.07, 1.11), p.light);
     let lit = mix(soil, flowers, mask) * (0.74 - slope * 0.33 + 0.18 * sun.y) * light_color;
-    return mix(lit, distant, 1.0 - exp(-t * 0.0055));
+    var color = mix(lit, distant, 1.0 - exp(-t * 0.0055));
+    if wf_enabled(WF_PARTICLES) {
+        let drift = film * 73.0 + vec2f(-0.52, -0.70) * p.time;
+        let grid = floor(drift);
+        let center = 0.17 + 0.66 * vec2f(hash(grid + 41.0), hash(grid + 17.0));
+        let pollen = exp(-length(fract(drift) - center) * 26.0) * smoothstep(0.87, 1.0, hash(grid));
+        color += vec3f(0.67, 0.48, 0.27) * pollen * 0.39;
+    }
+    return color;
 }

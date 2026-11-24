@@ -21,6 +21,61 @@ pub struct Settings {
     pub detail: f32,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Effects(u32);
+
+impl Effects {
+    pub const CLOUDS: u32 = 1 << 0;
+    pub const REFLECTIONS: u32 = 1 << 1;
+    pub const PARTICLES: u32 = 1 << 2;
+    pub const SHADOWS: u32 = 1 << 3;
+    pub const GRAIN: u32 = 1 << 4;
+
+    pub fn has(self, bit: u32) -> bool {
+        self.0 & bit != 0
+    }
+
+    pub fn set(&mut self, bit: u32, enabled: bool) {
+        self.0 = if enabled { self.0 | bit } else { self.0 & !bit };
+    }
+}
+
+impl Default for Effects {
+    fn default() -> Self {
+        Self(Self::CLOUDS | Self::REFLECTIONS | Self::PARTICLES | Self::SHADOWS | Self::GRAIN)
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct Shot {
+    pub action: u32,
+    pub progress: f32,
+    pub transition: f32,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct RenderInput {
+    pub settings: Settings,
+    pub time: f32,
+    pub effects: Effects,
+    pub shot: Shot,
+}
+
+impl RenderInput {
+    pub fn still(settings: Settings) -> Self {
+        Self {
+            settings,
+            time: 0.0,
+            effects: Effects::default(),
+            shot: Shot {
+                action: 0,
+                progress: 0.0,
+                transition: 1.0,
+            },
+        }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct Uniforms {
@@ -31,6 +86,12 @@ struct Uniforms {
     color: f32,
     camera: f32,
     detail: f32,
+    time: f32,
+    effects: u32,
+    action: u32,
+    progress: f32,
+    transition: f32,
+    padding: [f32; 3],
 }
 
 pub struct Renderer {
@@ -100,7 +161,12 @@ impl Renderer {
     pub fn compile(&self, source: &str, name: &str) -> Result<w::RenderPipeline, String> {
         let device = &self.device;
         device.push_error_scope(w::ErrorFilter::Validation);
-        let source = format!("{}\n{}", source, include_str!("common.wgsl"));
+        let source = format!(
+            "{}\n{}\n{}",
+            source,
+            include_str!("common.wgsl"),
+            include_str!("actors.wgsl")
+        );
         let shader = device.create_shader_module(w::ShaderModuleDescriptor {
             label: Some(name),
             source: w::ShaderSource::Wgsl(source.into()),
@@ -164,17 +230,23 @@ impl Renderer {
         encoder: &mut w::CommandEncoder,
         pipeline: &w::RenderPipeline,
         frame: &Frame,
-        settings: Settings,
+        input: RenderInput,
         samples: u32,
     ) {
         let uniforms = Uniforms {
             size: frame.size.map(|n| n as f32),
-            seed: settings.seed,
+            seed: input.settings.seed,
             samples,
-            light: settings.light,
-            color: settings.color,
-            camera: settings.camera,
-            detail: settings.detail,
+            light: input.settings.light,
+            color: input.settings.color,
+            camera: input.settings.camera,
+            detail: input.settings.detail,
+            time: input.time,
+            effects: input.effects.0,
+            action: input.shot.action,
+            progress: input.shot.progress,
+            transition: input.shot.transition,
+            padding: [0.0; 3],
         };
         let buffer = self
             .device
@@ -212,7 +284,7 @@ impl Renderer {
     pub fn export(
         &self,
         pipeline: &w::RenderPipeline,
-        settings: Settings,
+        input: RenderInput,
         size: [u32; 2],
         path: PathBuf,
     ) -> Result<Export, String> {
@@ -230,7 +302,7 @@ impl Renderer {
             mapped_at_creation: false,
         });
         let mut encoder = self.device.create_command_encoder(&Default::default());
-        self.draw(&mut encoder, pipeline, &frame, settings, 2);
+        self.draw(&mut encoder, pipeline, &frame, input, 2);
         encoder.copy_texture_to_buffer(
             frame.texture.as_image_copy(),
             w::TexelCopyBufferInfo {
